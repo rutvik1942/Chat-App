@@ -7,7 +7,6 @@ require('./db/connection');
 //Import files
 const Users = require('./models/Users');
 const Conversations = require('./models/Conversations');
-const Conversation = require('./models/Conversations');
 
 //app use
 const app = express();
