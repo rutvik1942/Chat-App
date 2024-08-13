@@ -1,4 +1,3 @@
-
 const express = require('express');
 const bcryptjs = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -8,6 +7,7 @@ require('./db/connection');
 //Import files
 const Users = require('./models/Users');
 const Conversations = require('./models/Conversations');
+const Messages = require('./models/Messages');
 
 //app use
 const app = express();
@@ -98,7 +98,37 @@ app.get('/api/conversation/:userId', async(req, res) => {
     try {
         const userId = req.params.userId;
         const conversations = await Conversations.find({members: {$in: [userId]}});
-        res.status(200).json(conversations);
+        const conversationUserData = Promise.all(conversations.map(async (conversations) => {
+            const receiverId =  conversations.members.find((member) => member !== userId);
+            const user = await Users.findById(receiverId);
+            return { user: {email: user.email, fullName: user.fullName}, conversationId : conversations._id}
+        }))
+        console.log('conversationUserData' ,await  conversationUserData);
+        res.status(200).json(await conversationUserData);
+    } catch (error) {
+        console.log(error, 'Error');
+    }
+})
+
+app.post('/api/message', async(req, res) => {
+    try {
+        const { conversationId, senderId, message } = req.body;
+        const newMessage = new Messages({ conversationId , senderId, message});
+        await newMessage.save();
+        res.status(200).send('Message send successfully');
+    } catch (error) {
+        console.log(error, 'Error');
+    }
+})
+
+app.get('/api/message/:conversationId', async (req, res) => {
+    try {
+        const conversationId = req.params.conversationId;
+        const message = await Messages.find({ conversationId });
+        const messageUserData = Promise.all(message.map(async (message) => {
+            const user = await Users.findById(message.senderId);
+            return { user: {email: user.email, fullName: user.fullName}, message: message.message}
+        }))
     } catch (error) {
         console.log(error, 'Error');
     }
